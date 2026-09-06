@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi chantiers</title>
+<style>
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:#F5F2EA;
+    color:#211F1A;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size:15px;
+    line-height:1.5;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 0 3rem;}
+  header{padding:2rem 1.25rem 1.5rem;border-bottom:1px solid #DAD5C8;}
+  h1{font-size:24px;font-weight:700;margin:0 0 2px;}
+  .subtitle{color:#8B8678;font-size:13.5px;margin:0;}
+  section{padding:1.5rem 1.25rem;border-bottom:1px solid #DAD5C8;}
+  .section-label{
+    font-weight:700;font-size:13px;color:#4A473F;
+    text-transform:uppercase;letter-spacing:0.06em;margin:0 0 0.9rem;
+  }
+  .quarter-totals{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .stat{background:#FFFFFF;border:1px solid #DAD5C8;border-radius:6px;padding:0.85rem 0.9rem;}
+  .stat.wide{grid-column:1 / -1;background:#F5E4CE;border-color:#C97A2B;}
+  .stat .label{font-size:12.5px;color:#4A473F;margin:0 0 4px;}
+  .stat .num{font-weight:700;font-size:22px;margin:0;}
+  .stat.wide .num{color:#7A4718;}
+  .stat-year{background:#E4EBEF;border-color:#3D5A73;}
+  .stat-year .num{color:#22394A;}
+  .stat-year .label{color:#2F4A5F;}
+  form{display:flex;flex-direction:column;gap:0.85rem;}
+  .field label{display:block;font-size:13px;color:#4A473F;margin-bottom:4px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;min-width:0;}
+  .row2 > .field, .row2 > input, .row2 > label{min-width:0;}
+  input{
+    width:100%;padding:10px 11px;font-size:15px;
+    border:1px solid #DAD5C8;border-radius:6px;background:#FFFFFF;color:#211F1A;
+    min-width:0;
+  }
+  .check-row{display:flex;align-items:center;gap:9px;padding-top:2px;}
+  .check-row input{width:18px;height:18px;flex-shrink:0;}
+  .check-row label{font-size:13.5px;color:#4A473F;}
+  .radio-opt{
+    display:flex;align-items:center;gap:7px;font-size:13.5px;color:#4A473F;
+    background:#FFFFFF;border:1px solid #DAD5C8;border-radius:6px;padding:9px 10px;
+  }
+  .radio-opt input{width:16px;height:16px;flex-shrink:0;}
+  button.primary{
+    margin-top:4px;background:#211F1A;color:#F5F2EA;border:none;
+    border-radius:6px;padding:13px;font-weight:700;font-size:15px;
+  }
+  .error-msg{font-size:13px;color:#A3402E;margin:-4px 0 0;display:none;}
+  .quarter-group{margin-bottom:1.4rem;}
+  .quarter-heading{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.6rem;}
+  .quarter-heading .q-name{font-weight:700;font-size:15px;}
+  .quarter-heading .q-sub{font-size:12.5px;color:#8B8678;}
+  .entry{
+    background:#FFFFFF;border:1px solid #DAD5C8;border-left:3px solid #3D5A73;
+    border-radius:6px;padding:0.8rem 0.9rem;margin-bottom:8px;
+  }
+  .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .entry-name{font-weight:600;font-size:14.5px;}
+  .entry-date{font-size:12px;color:#8B8678;margin-top:1px;}
+  .entry-del{background:none;border:none;color:#8B8678;font-size:12px;padding:4px;}
+  .entry-nums{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;}
+  .entry-nums .n{font-size:12.5px;color:#4A473F;}
+  .entry-nums .n b{font-weight:700;color:#211F1A;}
+  .entry-nums .n.taux b{color:#245A3D;}
+  .empty{text-align:center;color:#8B8678;font-size:13.5px;padding:1.5rem 0;}
+  #errorBanner{
+    display:none;background:#F8D7D2;color:#7A2418;padding:10px 14px;
+    font-size:12.5px;font-family:monospace;white-space:pre-wrap;
+    border-bottom:2px solid #A3402E;
+  }
+</style>
+</head>
+<body>
+<div id="errorBanner"></div>
+<div class="wrap">
+
+  <header>
+    <h1>Suivi chantiers</h1>
+    <p class="subtitle">Prestations de services (BIC) - micro-entreprise</p>
+  </header>
+
+  <section>
+    <p class="section-label">Nouveau chantier</p>
+    <form id="addForm">
+      <div class="field">
+        <label for="fNom">Nom du chantier</label>
+        <input type="text" id="fNom" placeholder="Renovation salle de bain, Dupont">
+      </div>
+      <div class="field">
+        <label for="fDate">Date</label>
+        <input type="date" id="fDate">
+      </div>
+      <div class="field">
+        <label for="fHeures">Heures passees</label>
+        <input type="number" id="fHeures" min="0" step="0.5" placeholder="8">
+      </div>
+      <div class="field">
+        <label for="fCa">Montant facture (EUR)</label>
+        <input type="number" id="fCa" min="0" step="0.01" placeholder="450.00">
+      </div>
+      <div class="field">
+        <label>Mode de paiement</label>
+        <div class="row2">
+          <label class="radio-opt"><input type="radio" name="fPaiement" value="virement" checked> Virement</label>
+          <label class="radio-opt"><input type="radio" name="fPaiement" value="especes"> Especes</label>
+        </div>
+      </div>
+      <p class="error-msg" id="formErr"></p>
+      <button type="submit" class="primary">Ajouter le chantier</button>
+    </form>
+  </section>
+
+  <section>
+    <p class="section-label" id="quarterLabel">Trimestre en cours</p>
+    <div class="quarter-totals" id="quarterTotals"></div>
+  </section>
+
+  <section>
+    <p class="section-label" id="monthLabel">Mois en cours</p>
+    <div class="quarter-totals" id="monthTotals"></div>
+  </section>
+
+  <section>
+    <p class="section-label" id="yearLabel">Moyenne annuelle</p>
+    <div class="stat stat-year" id="yearAvg"></div>
+  </section>
+
+  <section>
+    <p class="section-label">Historique</p>
+    <div id="history"></div>
+  </section>
+
+  <section>
+    <p class="section-label">Sauvegarde / changement d'appareil</p>
+    <p style="font-size:12.5px;color:#8B8678;margin:0 0 0.8rem;">
+      Copiez ce code avant de changer de telephone, puis collez-le dans la nouvelle app pour tout recuperer.
+    </p>
+    <textarea id="exportBox" readonly style="width:100%;height:70px;font-size:11px;font-family:monospace;padding:8px;border:1px solid #DAD5C8;border-radius:6px;background:#FFFFFF;color:#211F1A;margin-bottom:8px;"></textarea>
+    <button type="button" id="btnExport" class="primary" style="margin-bottom:14px;">Copier mes donnees</button>
+
+    <p style="font-size:12.5px;color:#8B8678;margin:0 0 0.8rem;">
+      Sur le nouvel appareil : collez ici le code recupere, puis appuyez sur Importer.
+    </p>
+    <textarea id="importBox" placeholder="Collez le code ici" style="width:100%;height:70px;font-size:11px;font-family:monospace;padding:8px;border:1px solid #DAD5C8;border-radius:6px;background:#FFFFFF;color:#211F1A;margin-bottom:8px;"></textarea>
+    <button type="button" id="btnImport" class="primary" style="background:#3D5A73;">Importer ces donnees</button>
+    <p class="error-msg" id="importMsg"></p>
+  </section>
+
+</div>
+
+<script>
+function showFatalError(msg) {
+  var b = document.getElementById('errorBanner');
+  b.textContent = 'Erreur: ' + msg;
+  b.style.display = 'block';
+}
+
+window.onerror = function(msg, url, line, col, err) {
+  showFatalError(msg + ' (ligne ' + line + ')');
+  return false;
+};
+
+var RATE_URSSAF_TOTAL = 0.232;
+var STORAGE_KEY = 'chantiers_data_v1';
+
+var state = { entries: [] };
+
+function euros(n) {
+  var rounded = Math.round(n * 100) / 100;
+  var neg = rounded < 0;
+  var fixed = Math.abs(rounded).toFixed(2);
+  var bits = fixed.split('.');
+  var intPart = bits[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return (neg ? '-' : '') + intPart + ',' + bits[1] + ' EUR';
+}
+
+function pad2(n) {
+  n = String(n);
+  return n.length < 2 ? '0' + n : n;
+}
+
+function parseDateParts(dateStr) {
+  var parts = dateStr.split('-');
+  return { y: parseInt(parts[0], 10), m: parseInt(parts[1], 10), d: parseInt(parts[2], 10) };
+}
+
+function quarterKeyFromDate(dateStr) {
+  var p = parseDateParts(dateStr);
+  if (!p.y || !p.m) return 'inconnu';
+  var q = Math.floor((p.m - 1) / 3) + 1;
+  return p.y + '-Q' + q;
+}
+
+function quarterLabel(key) {
+  var bits = key.split('-Q');
+  var names = ['1er', '2e', '3e', '4e'];
+  var idx = parseInt(bits[1], 10) - 1;
+  var name = names[idx] || bits[1];
+  return name + ' trimestre ' + bits[0];
+}
+
+function currentQuarterKey() {
+  var today = new Date();
+  var q = Math.floor(today.getMonth() / 3) + 1;
+  return today.getFullYear() + '-Q' + q;
+}
+
+function monthKeyFromDate(dateStr) {
+  var p = parseDateParts(dateStr);
+  if (!p.y || !p.m) return 'inconnu';
+  return p.y + '-' + pad2(p.m);
+}
+
+var MONTH_NAMES = ['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
+
+function monthLabel(key) {
+  var bits = key.split('-');
+  var idx = parseInt(bits[1], 10) - 1;
+  var name = MONTH_NAMES[idx] || bits[1];
+  return name + ' ' + bits[0];
+}
+
+function currentMonthKey() {
+  var today = new Date();
+  return today.getFullYear() + '-' + pad2(today.getMonth() + 1);
+}
+
+function computeEntry(e) {
+  var total = e.ca * RATE_URSSAF_TOTAL;
+  var net = e.ca - total;
+  var taux = e.heures > 0 ? net / e.heures : null;
+  return { total: total, net: net, taux: taux };
+}
+
+function saveState() {
+  var raw = JSON.stringify(state);
+  try {
+    window.localStorage.setItem(STORAGE_KEY, raw);
+  } catch (err) {
+    console.error('Sauvegarde impossible', err);
+  }
+}
+
+function loadState(callback) {
+  try {
+    var raw = window.localStorage.getItem(STORAGE_KEY);
+    applyLoadedValue(raw);
+  } catch (err) {
+    console.error('Lecture des donnees impossible', err);
+  }
+  callback();
+}
+
+function applyLoadedValue(raw) {
+  if (!raw) return;
+  try {
+    var parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.entries)) {
+      state = parsed;
+    }
+  } catch (err) {
+    console.error('JSON invalide en stockage', err);
+  }
+}
+
+function renderQuarterTotals() {
+  var key = currentQuarterKey();
+  document.getElementById('quarterLabel').textContent = quarterLabel(key) + ' (en cours)';
+
+  var ca = 0, cotis = 0, net = 0;
+  for (var i = 0; i < state.entries.length; i++) {
+    var e = state.entries[i];
+    if (quarterKeyFromDate(e.date) !== key) continue;
+    var c = computeEntry(e);
+    ca += e.ca;
+    cotis += c.total;
+    net += c.net;
+  }
+
+  var el = document.getElementById('quarterTotals');
+  el.innerHTML =
+    '<div class="stat"><p class="label">Chiffre d\'affaires</p><p class="num">' + euros(ca) + '</p></div>' +
+    '<div class="stat"><p class="label">Revenu net</p><p class="num">' + euros(net) + '</p></div>' +
+    '<div class="stat wide"><p class="label">Cotisations a declarer</p><p class="num">' + euros(cotis) + '</p></div>';
+}
+
+function renderMonthTotals() {
+  var key = currentMonthKey();
+  document.getElementById('monthLabel').textContent = monthLabel(key) + ' (en cours)';
+
+  var ca = 0, cotis = 0, net = 0;
+  for (var i = 0; i < state.entries.length; i++) {
+    var e = state.entries[i];
+    if (monthKeyFromDate(e.date) !== key) continue;
+    var c = computeEntry(e);
+    ca += e.ca;
+    cotis += c.total;
+    net += c.net;
+  }
+
+  var el = document.getElementById('monthTotals');
+  el.innerHTML =
+    '<div class="stat"><p class="label">Chiffre d\'affaires</p><p class="num">' + euros(ca) + '</p></div>' +
+    '<div class="stat"><p class="label">Revenu net</p><p class="num">' + euros(net) + '</p></div>' +
+    '<div class="stat wide"><p class="label">Cotisations a declarer</p><p class="num">' + euros(cotis) + '</p></div>';
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderHistory() {
+  var container = document.getElementById('history');
+  if (state.entries.length === 0) {
+    container.innerHTML = '<p class="empty">Aucun chantier enregistre pour le moment.</p>';
+    return;
+  }
+
+  var sorted = state.entries.slice().sort(function(a, b) {
+    return b.date.localeCompare(a.date);
+  });
+
+  var groups = {};
+  var order = [];
+  for (var i = 0; i < sorted.length; i++) {
+    var key = quarterKeyFromDate(sorted[i].date);
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(sorted[i]);
+  }
+  order.sort().reverse();
+
+  var html = '';
+  for (var g = 0; g < order.length; g++) {
+    var key = order[g];
+    var list = groups[key];
+    var qCa = 0, qCotis = 0;
+    for (var j = 0; j < list.length; j++) {
+      var c = computeEntry(list[j]);
+      qCa += list[j].ca;
+      qCotis += c.total;
+    }
+
+    html += '<div class="quarter-group">' +
+      '<div class="quarter-heading">' +
+      '<span class="q-name">' + escapeHtml(quarterLabel(key)) + '</span>' +
+      '<span class="q-sub">' + euros(qCa) + ' CA - ' + euros(qCotis) + ' cotis.</span>' +
+      '</div>';
+
+    for (var k = 0; k < list.length; k++) {
+      var e = list[k];
+      var c2 = computeEntry(e);
+      var tauxHtml = '';
+      if (c2.taux !== null) {
+        tauxHtml = '<span class="n taux">Taux h. <b>' + euros(c2.taux) + '/h</b></span>';
+      }
+      var paiementLabel = e.paiement === 'especes' ? 'Especes' : 'Virement';
+      html += '<div class="entry">' +
+        '<div class="entry-top">' +
+        '<div>' +
+        '<div class="entry-name">' + escapeHtml(e.nom || 'Chantier sans nom') + '</div>' +
+        '<div class="entry-date">' + escapeHtml(e.date) + ' - ' + paiementLabel + '</div>' +
+        '</div>' +
+        '<button class="entry-del" data-id="' + e.id + '">Supprimer</button>' +
+        '</div>' +
+        '<div class="entry-nums">' +
+        '<span class="n">CA <b>' + euros(e.ca) + '</b></span>' +
+        '<span class="n">Cotis. <b>' + euros(c2.total) + '</b></span>' +
+        '<span class="n">Net <b>' + euros(c2.net) + '</b></span>' +
+        tauxHtml +
+        '</div>' +
+        '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+
+  var delButtons = container.querySelectorAll('.entry-del');
+  for (var b = 0; b < delButtons.length; b++) {
+    delButtons[b].addEventListener('click', function(evt) {
+      var id = evt.target.getAttribute('data-id');
+      var newEntries = [];
+      for (var n = 0; n < state.entries.length; n++) {
+        if (state.entries[n].id !== id) newEntries.push(state.entries[n]);
+      }
+      state.entries = newEntries;
+      saveState();
+      renderAll();
+    });
+  }
+}
+
+function renderYearAverage() {
+  var year = new Date().getFullYear();
+  var netTotal = 0, heuresTotal = 0;
+  for (var i = 0; i < state.entries.length; i++) {
+    var e = state.entries[i];
+    var p = parseDateParts(e.date);
+    if (p.y !== year) continue;
+    if (!(e.heures > 0)) continue;
+    var c = computeEntry(e);
+    netTotal += c.net;
+    heuresTotal += e.heures;
+  }
+
+  document.getElementById('yearLabel').textContent = 'Moyenne annuelle ' + year;
+  var el = document.getElementById('yearAvg');
+  if (heuresTotal > 0) {
+    el.innerHTML = '<p class="label">Taux horaire moyen</p><p class="num">' + euros(netTotal / heuresTotal) + '/h</p>';
+  } else {
+    el.innerHTML = '<p class="label">Taux horaire moyen</p><p class="num">-</p>';
+  }
+}
+
+function renderExportBox() {
+  var box = document.getElementById('exportBox');
+  if (box) box.value = JSON.stringify(state);
+}
+
+function renderAll() {
+  renderQuarterTotals();
+  renderMonthTotals();
+  renderYearAverage();
+  renderHistory();
+  renderExportBox();
+}
+
+document.getElementById('addForm').addEventListener('submit', function(evt) {
+  evt.preventDefault();
+  var nom = document.getElementById('fNom').value;
+  var date = document.getElementById('fDate').value;
+  var ca = parseFloat(document.getElementById('fCa').value);
+  var heures = parseFloat(document.getElementById('fHeures').value);
+  var paiementInput = document.querySelector('input[name="fPaiement"]:checked');
+  var paiement = paiementInput ? paiementInput.value : 'virement';
+  var errEl = document.getElementById('formErr');
+
+  if (!date || isNaN(ca) || ca <= 0) {
+    errEl.textContent = 'Indiquez une date et un montant facture.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  var entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    nom: nom,
+    date: date,
+    ca: ca,
+    heures: isNaN(heures) ? 0 : heures,
+    paiement: paiement
+  };
+  state.entries.push(entry);
+  saveState();
+
+  document.getElementById('addForm').reset();
+  renderAll();
+});
+
+document.getElementById('btnExport').addEventListener('click', function() {
+  var box = document.getElementById('exportBox');
+  box.focus();
+  box.select();
+  box.setSelectionRange(0, 999999);
+  var copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (err) {
+    copied = false;
+  }
+  if (!copied && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(box.value).then(function() {
+      alert('Donnees copiees. Collez-les dans Notes pour les garder.');
+    }).catch(function() {
+      alert('Selectionnez le texte manuellement et copiez-le.');
+    });
+    return;
+  }
+  alert(copied ? 'Donnees copiees. Collez-les dans Notes pour les garder.' : 'Selectionnez le texte manuellement et copiez-le.');
+});
+
+document.getElementById('btnImport').addEventListener('click', function() {
+  var msgEl = document.getElementById('importMsg');
+  var raw = document.getElementById('importBox').value.trim();
+  if (!raw) {
+    msgEl.textContent = 'Collez d\'abord le code recupere.';
+    msgEl.style.display = 'block';
+    return;
+  }
+  try {
+    var parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.entries)) {
+      throw new Error('Format invalide');
+    }
+    state = parsed;
+    saveState();
+    document.getElementById('importBox').value = '';
+    msgEl.style.display = 'none';
+    renderAll();
+    alert('Donnees importees avec succes.');
+  } catch (err) {
+    msgEl.textContent = 'Ce code ne semble pas valide. Verifiez le copier-coller.';
+    msgEl.style.display = 'block';
+  }
+});
+
+(function initDate() {
+  var today = new Date();
+  var iso = today.getFullYear() + '-' + pad2(today.getMonth() + 1) + '-' + pad2(today.getDate());
+  document.getElementById('fDate').value = iso;
+})();
+
+loadState(renderAll);
+</script>
+</body>
+</html>
